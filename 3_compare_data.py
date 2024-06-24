@@ -4,6 +4,10 @@ import pyodbc as db
 import pandas as pd
 import warnings
 
+# Logic: First I create a mirror table of main_table and then compare the new data from the table
+# main with the old data from the backup table and then create a new column in the mirror table
+# and assign with current date to new recently added items!
+
 # Connection to Database
 try:
     conn = db.connect(

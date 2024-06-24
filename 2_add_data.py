@@ -1,6 +1,6 @@
 import pyodbc as db
 
-# Agrego los nuevo
+# I load new data into my main table
 
 # Connection to Database
 try:
@@ -15,9 +15,9 @@ except db.Error as ex:
 
 def insertData(table):
     result = f"""
-    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (13,'Matias','Gomez','javo15@gmail.com','436354768')
-    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (14,'Roberto','Trebuc','tertu-88@gmail.com','657374468')
-    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (15,'Daniel','Villacorta','fer18@gmail.com','244235368')
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (16,'Ramon','Gomez','javo15@gmail.com','436354768')
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (17,'Tamara','Trebuc','tertu-88@gmail.com','657374468')
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (18,'Mariano','Villacorta','fer18@gmail.com','244235368')
     """
     return result
 

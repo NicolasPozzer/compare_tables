@@ -1,6 +1,6 @@
 import pyodbc as db
 
-#Creo 2 tablas copias de la tabla main -> mirror_tabla & backup_table
+# I create 1 table copy of the main table -> backup_table
 
 # Connection to Database
 try:
