@@ -1,5 +1,7 @@
 import pyodbc as db
 
+#Creo 2 tablas copias de la tabla main -> mirror_tabla & backup_table
+
 # Connection to Database
 try:
     conn = db.connect(
@@ -12,9 +14,9 @@ except db.Error as ex:
     print("Error connecting: ",ex)
 
 #Query: create mirror table
-create_mirror_table = """
+create_backup_table = """
 SELECT *
-INTO mirror_table
+INTO backup_table
 FROM main_table;
 """
 
@@ -22,10 +24,8 @@ FROM main_table;
 try:
     cursor = conn.cursor()  # I use cursor to manage the connection
 
-    # Execute the insert query
-    cursor.execute(create_mirror_table)
-
-    conn.commit() # Confirm the transaction
+    cursor.execute(create_backup_table)
+    conn.commit()
     print("Insertion completed successfully")
 
 except db.Error as ex:

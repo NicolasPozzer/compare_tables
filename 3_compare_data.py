@@ -1,5 +1,8 @@
+from datetime import datetime
+
 import pyodbc as db
 import pandas as pd
+import warnings
 
 # Connection to Database
 try:
@@ -13,7 +16,7 @@ except db.Error as ex:
     print("Error connecting: ",ex)
 
 
-select_mirror_table = "SELECT * FROM mirror_table"
+select_mirror_table = "SELECT * FROM backup_table"
 select_main_table = "SELECT * FROM main_table"
 
 
@@ -31,22 +34,35 @@ def verify_and_add_column(conn, table_name, column_name, column_type):
     if not result:
         add_column_query = f"""
         ALTER TABLE {table_name}
-        ADD {column_name} {column_type}
+        ADD {column_name} {column_type} 
         """
         cursor.execute(add_column_query)
         conn.commit()
         print(f"Column Add! '{column_name}' a '{table_name}'.")
 
+create_mirror_table = """
+SELECT *
+INTO mirror_table
+FROM main_table;
+"""
+
 # I run the insert query and commit the transaction
 try:
-    verify_and_add_column(conn, 'main_table', 'isNew_element', 'VARCHAR(50)')
+    # Ignore warnings SQL Alchemy
+    warnings.filterwarnings('ignore', message='pandas only supports SQLAlchemy connectable')
+
+    # Execute the insert query
+    conn.execute(create_mirror_table)
+    conn.commit()  # Confirm the transaction
+
+    verify_and_add_column(conn, 'mirror_table', 'isNew_element', 'VARCHAR(50)')
 
     main_table = pd.read_sql(select_main_table, conn)
     mirror_table = pd.read_sql(select_mirror_table, conn)
 
     #Compare
     main_table['isNew_element'] = main_table['ID'].apply(
-        lambda x: 'YES' if x not in mirror_table['ID'].values else ''
+        lambda x: datetime.now() if x not in mirror_table['ID'].values else ''
     )
 
     # Save Changes
@@ -54,7 +70,7 @@ try:
     # Update Table
     for index, row in main_table.iterrows():
         update_query = """
-            UPDATE main_table
+            UPDATE mirror_table
             SET isNew_element = ?
             WHERE id = ?
             """

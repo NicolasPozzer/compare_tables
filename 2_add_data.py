@@ -1,5 +1,7 @@
 import pyodbc as db
 
+# Agrego los nuevo
+
 # Connection to Database
 try:
     conn = db.connect(
@@ -11,23 +13,22 @@ try:
 except db.Error as ex:
     print("Error connecting: ",ex)
 
-
-insert_data = """
-INSERT INTO main_table (ID,Name,Last_Name,Email,Phone) VALUES (7,'Javier','Gomez','javo15@gmail.com','436354768')
-INSERT INTO main_table (ID,Name,Last_Name,Email,Phone) VALUES (8,'Ivan','Trebuc','tertu-88@gmail.com','657374468')
-INSERT INTO main_table (ID,Name,Last_Name,Email,Phone) VALUES (9,'Fernando','Villacorta','fer18@gmail.com','244235368')
-"""
-
-
+def insertData(table):
+    result = f"""
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (13,'Matias','Gomez','javo15@gmail.com','436354768')
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (14,'Roberto','Trebuc','tertu-88@gmail.com','657374468')
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (15,'Daniel','Villacorta','fer18@gmail.com','244235368')
+    """
+    return result
 
 # I run the insert query and commit the transaction
 try:
     cursor = conn.cursor()  # I use cursor to manage the connection
 
     # Execute the insert query
-    cursor.execute(insert_data)
+    cursor.execute(insertData("main_table"))
+    conn.commit()  # Confirm the transaction
 
-    conn.commit() # Confirm the transaction
     print("Insertion completed successfully")
 
 except db.Error as ex:
