@@ -13,6 +13,7 @@ except db.Error as ex:
 
 #Queries
 queries = """
+
 """
 
 # I run the insert query and commit the transaction
@@ -23,10 +24,8 @@ try:
     cursor.execute(queries)
 
     #conn.commit() # Confirm the transaction
-    print(cursor.fetchall())
 
     #result
-
 
 except db.Error as ex:
     print(f"Error executing query: {ex}")
