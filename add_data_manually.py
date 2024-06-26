@@ -1,5 +1,7 @@
 import pyodbc as db
 
+# I load new data into my new table
+
 # Connection to Database
 try:
     conn = db.connect(
@@ -11,21 +13,23 @@ try:
 except db.Error as ex:
     print("Error connecting: ",ex)
 
-#Queries
-queries = """
-
-"""
+def insertData(table):
+    result = f"""
+    INSERT INTO {table} (ID,Name) VALUES (22,'Ramon')
+    INSERT INTO {table} (ID,Name) VALUES (23,'Tamara')
+    INSERT INTO {table} (ID,Name) VALUES (24,'Mariano')
+    """
+    return result
 
 # I run the insert query and commit the transaction
 try:
     cursor = conn.cursor()  # I use cursor to manage the connection
 
     # Execute the insert query
-    cursor.execute(queries)
+    cursor.execute(insertData("new_table"))
+    conn.commit()  # Confirm the transaction
 
-    #conn.commit() # Confirm the transaction
-
-    #result
+    print("Insertion completed successfully")
 
 except db.Error as ex:
     print(f"Error executing query: {ex}")
