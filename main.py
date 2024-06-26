@@ -3,10 +3,6 @@ import pyodbc as db
 import pandas as pd
 import warnings
 
-# Logic: First I create a mirror table of new_table and then compare the new data from the table
-# new_table with the old data from the backup table and then create a new column in the mirror table
-# and assign with current date to new recently added items!
-
 # Connection to Database
 try:
     conn = db.connect(
@@ -64,6 +60,10 @@ SELECT *
 INTO mirror_table
 FROM new_table;
 """
+
+# Logical explanation: First I create a mirror table of new_table and then compare the new data from the table
+# new_table with the old data from the backup table and then create a new column in the mirror table
+# and assign with current date to new recently added items!
 
 try:
     # Ignore warnings from SQLAlchemy
