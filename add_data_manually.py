@@ -15,9 +15,8 @@ except db.Error as ex:
 
 def insertData(table):
     result = f"""
-    INSERT INTO {table} (ID,Name) VALUES (22,'Ramon')
-    INSERT INTO {table} (ID,Name) VALUES (23,'Tamara')
-    INSERT INTO {table} (ID,Name) VALUES (24,'Mariano')
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (3,'Adrsdfian','Ramirez','fer18@gmail.com','244235368')
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (4,'Marisdfsano','Tomas','fer18@gmail.com','244235368')
     """
     return result
 
@@ -26,7 +25,7 @@ try:
     cursor = conn.cursor()  # I use cursor to manage the connection
 
     # Execute the insert query
-    cursor.execute(insertData("new_table"))
+    cursor.execute(insertData("main_table"))
     conn.commit()  # Confirm the transaction
 
     print("Insertion completed successfully")

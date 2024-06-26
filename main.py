@@ -2,6 +2,7 @@ from datetime import datetime
 import pyodbc as db
 import pandas as pd
 import warnings
+from src.comp.necesary_functions import table_exists, verify_new_rows, verify_and_add_column
 
 # Connection to Database
 try:
@@ -19,38 +20,7 @@ execute_stored_procedure = "EXEC [dbo].[getMain_table]"
 
 
 
-
-# Function to check and add the column if it does not exist
-def verify_and_add_column(conn, table_name, column_name, column_type):
-    cursor = conn.cursor()
-    check_column_query = f"""
-    SELECT COLUMN_NAME
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_NAME = '{table_name}' AND COLUMN_NAME = '{column_name}'
-    """
-    cursor.execute(check_column_query)
-    result = cursor.fetchone()
-
-    if not result:
-        add_column_query = f"""
-        ALTER TABLE {table_name}
-        ADD {column_name} {column_type} 
-        """
-        cursor.execute(add_column_query)
-        conn.commit()
-        print(f"Column '{column_name}' added to '{table_name}'.")
-
-# Function to check if a table exists
-def table_exists(conn, table_name):
-    cursor = conn.cursor()
-    check_table_query = f"""
-    SELECT 1 
-    FROM INFORMATION_SCHEMA.TABLES 
-    WHERE TABLE_NAME = '{table_name}'
-    """
-    cursor.execute(check_table_query)
-    return cursor.fetchone() is not None
-
+# Do not touch these fields ⬇⬇
 select_new_table = "SELECT * FROM new_table"
 select_mirror_table = "SELECT * FROM mirror_table"
 
@@ -107,6 +77,8 @@ try:
 
             except db.Error as ex:
                 print(f"Error executing query: {ex}")
+    else:
+        verify_new_rows(conn, execute_stored_procedure)
 
     if not table_exists(conn, 'mirror_table'):
         # Create the mirror table
@@ -148,6 +120,13 @@ try:
 except db.Error as ex:
     print(f"Error executing query: {ex}")
 finally:
+    # Drop temp_table if it exists
+    if table_exists(conn, 'temp_table'):
+        drop_temp_table_query = "DROP TABLE temp_table;"
+        conn.execute(drop_temp_table_query)
+        conn.commit()
+        print("Temporary table 'temp_table' dropped successfully.")
+
     # Close the connection whether errors occur or not.
     if 'conn' in locals():
         conn.close()
