@@ -30,7 +30,7 @@ def table_exists(conn, table_name):
     cursor.execute(check_table_query)
     return cursor.fetchone() is not None
 
-def verify_new_rows(conn, execute_stored_procedure):
+def verify_new_rows(conn, execute_stored_procedure,fake,primary_key):
     try:
         cursor = conn.cursor()
 
@@ -48,9 +48,10 @@ def verify_new_rows(conn, execute_stored_procedure):
 
         # Insert fetched results into temp_table
         for row in results:
+            masked_row = mask_data(row, columns, fake)
             insert_row = f"""
             INSERT INTO temp_table ({', '.join(columns)})
-            VALUES ({', '.join([f"'{str(val)}'" for val in row])});
+            VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])});
             """
             cursor.execute(insert_row)
         conn.commit()
@@ -62,7 +63,7 @@ def verify_new_rows(conn, execute_stored_procedure):
         SELECT {', '.join(columns)}
         FROM temp_table
         WHERE NOT EXISTS (
-            SELECT 1 FROM new_table WHERE new_table.ID = temp_table.ID
+            SELECT 1 FROM new_table WHERE new_table.{primary_key} = temp_table.{primary_key}
         );
         """
         cursor.execute(insert_new_rows_query)
@@ -71,3 +72,21 @@ def verify_new_rows(conn, execute_stored_procedure):
 
     except Exception as ex:
         print(f"Error executing query: {ex}")
+
+#Data masking
+def mask_data(row, columns, fake, primary_key):
+    masked_row = []
+    for col, val in zip(columns, row):
+        if col == primary_key:
+            masked_row.append(val)
+        else:
+            # Generar la data falsa dependiendo del tipo de dato
+            if isinstance(val, int):
+                masked_row.append(fake.random_number(digits=len(str(val))))
+            elif isinstance(val, float):
+                masked_row.append(fake.random_number(digits=len(str(val).replace('.', '')))/100)
+            elif isinstance(val, str):
+                masked_row.append(fake.word())
+            else:
+                masked_row.append(val)
+    return masked_row

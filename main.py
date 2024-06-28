@@ -2,7 +2,9 @@ from datetime import datetime
 import pyodbc as db
 import pandas as pd
 import warnings
-from src.comp.necesary_functions import table_exists, verify_new_rows, verify_and_add_column
+from faker import Faker
+from src.comp.necesary_functions import (table_exists,
+verify_new_rows, verify_and_add_column, mask_data)
 
 # Connection to Database
 try:
@@ -15,8 +17,13 @@ try:
 except db.Error as ex:
     print("Error connecting: ", ex)
 
-# Query: Execute stored procedure and fetch results
+# Query: Execute stored procedure and fetch results⬇
 execute_stored_procedure = "EXEC [dbo].[getMain_table]"
+
+#SET PRIMARY KEY Ej. EMPLEID, id, ID, etc
+primary_key = "ID"
+
+# ⬆⬆⬆ Just modify the fields above ⬆⬆⬆
 
 
 
@@ -30,6 +37,12 @@ SELECT *
 INTO mirror_table
 FROM new_table;
 """
+
+
+# Función para enmascarar datos
+
+
+fake = Faker()
 
 # Logical explanation: First I create a mirror table of new_table and then compare the new data from the table
 # new_table with the old data from the backup table and then create a new column in the mirror table
@@ -48,7 +61,9 @@ try:
                 results = cursor.fetchall()  # Fetch all results
                 columns = [column[0] for column in cursor.description]  # Get column names
 
-                # Crea la nueva tabla basandose en los resultados de la misma
+
+
+                # Create the new table based on the results of the table
                 create_new_table = f"""
                 CREATE TABLE new_table ({', '.join([f'{col} NVARCHAR(MAX)' for col in columns])});
                 """
@@ -57,11 +72,13 @@ try:
 
                 # Insert the fetched results into the new table
                 for row in results:
+                    masked_row = mask_data(row, columns, fake, primary_key)
                     insert_row = f"""
                     INSERT INTO new_table ({', '.join(columns)})
-                    VALUES ({', '.join([f"'{str(val)}'" for val in row])});
+                    VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])});
                     """
                     cursor.execute(insert_row)
+
                 conn.commit()
                 print("Stored procedure executed and results stored in new_table successfully")
 
@@ -78,7 +95,7 @@ try:
             except db.Error as ex:
                 print(f"Error executing query: {ex}")
     else:
-        verify_new_rows(conn, execute_stored_procedure)
+        verify_new_rows(conn, execute_stored_procedure, fake, primary_key)
 
     if not table_exists(conn, 'mirror_table'):
         # Create the mirror table
@@ -92,7 +109,7 @@ try:
     mirror_table = pd.read_sql(select_mirror_table, conn)
 
     # Identify new rows
-    new_rows = new_table[~new_table['ID'].isin(mirror_table['ID'])]
+    new_rows = new_table[~new_table[primary_key].isin(mirror_table[primary_key])]
 
     if not new_rows.empty:
         # Insert new rows into mirror_table
@@ -107,12 +124,12 @@ try:
 
     # Update isNew_element for new rows in mirror_table
     for index, row in new_rows.iterrows():
-        update_query = """
+        update_query = f"""
             UPDATE mirror_table
             SET isNew_element = ?
-            WHERE ID = ?
+            WHERE {primary_key} = ?
             """
-        cursor.execute(update_query, datetime.now(), row['ID'])
+        cursor.execute(update_query, datetime.now(), row[primary_key])
 
     conn.commit()
     print("Comparison and update completed successfully.")
