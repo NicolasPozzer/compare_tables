@@ -48,7 +48,7 @@ def verify_new_rows(conn, execute_stored_procedure,fake,primary_key):
 
         # Insert fetched results into temp_table
         for row in results:
-            masked_row = mask_data(row, columns, fake)
+            masked_row = mask_data(row, columns, fake, primary_key)
             insert_row = f"""
             INSERT INTO temp_table ({', '.join(columns)})
             VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])});
