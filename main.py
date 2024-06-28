@@ -20,7 +20,7 @@ except db.Error as ex:
 # Query: Execute stored procedure and fetch results⬇
 execute_stored_procedure = "EXEC [dbo].[getMain_table]"
 
-#SET PRIMARY KEY Ej. EMPLEID, id, ID, etc
+# Set Primary Key Ej. EMPLEID, id, ID, etc
 primary_key = "ID"
 
 # ⬆⬆⬆ Just modify the fields above ⬆⬆⬆
