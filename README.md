@@ -6,7 +6,7 @@
 To run the script, install the dependencies.
 
 ```bash
-  pip install pandas pyodbc
+  pip install pandas pyodbc Faker
 ```
 
 ## Instructions

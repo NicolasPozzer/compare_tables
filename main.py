@@ -27,6 +27,7 @@ primary_key = "ID"
 
 
 
+
 # Do not touch these fields ⬇⬇
 select_new_table = "SELECT * FROM new_table"
 select_mirror_table = "SELECT * FROM mirror_table"
@@ -37,10 +38,6 @@ SELECT *
 INTO mirror_table
 FROM new_table;
 """
-
-
-# Función para enmascarar datos
-
 
 fake = Faker()
 
