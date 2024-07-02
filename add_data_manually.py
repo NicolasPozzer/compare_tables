@@ -15,8 +15,8 @@ except db.Error as ex:
 
 def insertData(table):
     result = f"""
-    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (17,'asdasiro','Parra','rami@gmail.com','7585368')
-    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (18,'asdaiel','Ruiz','dani@gmail.com','65735368')
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (5,'asdasiro','Parra','rami@gmail.com','7585368')
+    INSERT INTO {table} (ID,Name,Last_Name,Email,Phone) VALUES (6,'asdaiel','Ruiz','dani@gmail.com','65735368')
     """
     return result
 

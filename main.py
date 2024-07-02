@@ -21,7 +21,10 @@ except db.Error as ex:
 execute_stored_procedure = "EXEC [dbo].[getMain_table]"
 
 # Set Primary Key Ej. EMPLEID, id, ID, etc
-primary_key = "ID"
+primary_key = "EMPLID"
+
+# Set Dont mask columns (Ej. ["FIRST_NAME","LAST_NAME"])
+dont_mask = [primary_key, "FIRST_NAME"]
 
 # ⬆⬆⬆ Just modify the fields above ⬆⬆⬆
 
@@ -38,7 +41,7 @@ SELECT *
 INTO mirror_table
 FROM new_table;
 """
-
+cache = {}
 fake = Faker()
 
 # Logical explanation: First I create a mirror table of new_table and then compare the new data from the table
@@ -69,7 +72,7 @@ try:
 
                 # Insert the fetched results into the new table
                 for row in results:
-                    masked_row = mask_data(row, columns, fake, primary_key)
+                    masked_row = mask_data(row, columns, fake, primary_key, cache, dont_mask)
                     insert_row = f"""
                     INSERT INTO new_table ({', '.join(columns)})
                     VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])});
@@ -92,7 +95,7 @@ try:
             except db.Error as ex:
                 print(f"Error executing query: {ex}")
     else:
-        verify_new_rows(conn, execute_stored_procedure, fake, primary_key)
+        verify_new_rows(conn, execute_stored_procedure, fake, primary_key, cache, dont_mask)
 
     if not table_exists(conn, 'mirror_table'):
         # Create the mirror table
