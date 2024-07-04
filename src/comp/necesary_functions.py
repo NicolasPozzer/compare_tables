@@ -30,7 +30,7 @@ def table_exists(conn, table_name):
     cursor.execute(check_table_query)
     return cursor.fetchone() is not None
 
-def verify_new_rows(conn, execute_stored_procedure,fake,primary_key, cache, dont_mask):
+def verify_new_rows(conn, execute_stored_procedure,fake,primary_key, cache, dont_mask, column_fakes):
     try:
         cursor = conn.cursor()
 
@@ -48,7 +48,7 @@ def verify_new_rows(conn, execute_stored_procedure,fake,primary_key, cache, dont
 
         # Insert fetched results into temp_table
         for row in results:
-            masked_row = mask_data(row, columns, fake, primary_key, cache,dont_mask)
+            masked_row = mask_data(row, columns, fake, primary_key, cache,dont_mask, column_fakes)
             insert_row = f"""
             INSERT INTO temp_table ({', '.join(columns)})
             VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])});
@@ -73,14 +73,15 @@ def verify_new_rows(conn, execute_stored_procedure,fake,primary_key, cache, dont
     except Exception as ex:
         print(f"Error executing query: {ex}")
 
-#Data masking
-def mask_data(row, columns, fake, primary_key, cache, dont_mask):
+from faker import Faker
+
+# Data masking
+def mask_data(row, columns, fake, primary_key, cache, dont_mask, column_fakes):
     masked_row = []
 
     # Obtener el valor de la clave primaria de la fila
     pk_value = row[columns.index(primary_key)]
 
-    # Verificar si ya hay datos falsos generados para esta clave primaria
     if pk_value in cache:
         masked_row = cache[pk_value]
     else:
@@ -90,11 +91,29 @@ def mask_data(row, columns, fake, primary_key, cache, dont_mask):
             else:
                 # Generar la data falsa dependiendo del tipo de dato
                 if isinstance(val, int):
-                    masked_row.append(fake.random_number(digits=len(str(val))))
+                    column_mask = next((cf for cf in column_fakes if cf.name == col), None)
+                    if column_mask:
+                        fake_expression = f'fake.{column_mask.type_mask}'
+                        fake_value = eval(fake_expression)
+                        masked_row.append(fake_value)
+                    else:
+                        masked_row.append(fake.random_number(digits=len(str(val))))
                 elif isinstance(val, float):
-                    masked_row.append(fake.random_number(digits=len(str(val).replace('.', '')))/100)
+                    column_mask = next((cf for cf in column_fakes if cf.name == col), None)
+                    if column_mask:
+                        fake_expression = f'fake.{column_mask.type_mask}'
+                        fake_value = eval(fake_expression)
+                        masked_row.append(fake_value)
+                    else:
+                        masked_row.append(fake.random_number(digits=len(str(val).replace('.', '')))/100)
                 elif isinstance(val, str):
-                    masked_row.append(fake.word())
+                    column_mask = next((cf for cf in column_fakes if cf.name == col), None)
+                    if column_mask:
+                        fake_expression = f'fake.{column_mask.type_mask}'
+                        fake_value = eval(fake_expression)
+                        masked_row.append(fake_value)
+                    else:
+                        masked_row.append(fake.word())
                 else:
                     masked_row.append(val)
         # Almacenar la fila con datos falsos en el cache

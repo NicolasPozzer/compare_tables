@@ -17,3 +17,6 @@ To run the script, install the dependencies.
 
 #### mirror_table result:
 ![plot](https://i.imgur.com/WQJfNaU.jpeg)
+
+## Faker Methods
+![plot](https://i.imgur.com/We9pwAX.png)

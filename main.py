@@ -3,6 +3,8 @@ import pyodbc as db
 import pandas as pd
 import warnings
 from faker import Faker
+
+from src.comp.ColumnMask import ColumnMask
 from src.comp.necesary_functions import (table_exists,
 verify_new_rows, verify_and_add_column, mask_data)
 
@@ -24,10 +26,20 @@ execute_stored_procedure = "EXEC [dbo].[getMain_table]"
 primary_key = "EMPLID"
 
 # Set Dont mask columns (Ej. ["FIRST_NAME","LAST_NAME"])
-dont_mask = [primary_key, "FIRST_NAME"]
+dont_mask = [primary_key,"FIRST_NAME"]
+
+fake = Faker()
+
+# Implement column field name and fake to use for it
+column1 = ColumnMask("LAST_NAME","last_name()")
+column2 = ColumnMask("LVL","random_int()")
+column3 = ColumnMask("ORDR","ssn()")
+
+#List of Objects to Mask
+column_fakes = [column1, column2, column3]
+
 
 # ⬆⬆⬆ Just modify the fields above ⬆⬆⬆
-
 
 
 
@@ -42,7 +54,6 @@ INTO mirror_table
 FROM new_table;
 """
 cache = {}
-fake = Faker()
 
 # Logical explanation: First I create a mirror table of new_table and then compare the new data from the table
 # new_table with the old data from the backup table and then create a new column in the mirror table
@@ -72,7 +83,7 @@ try:
 
                 # Insert the fetched results into the new table
                 for row in results:
-                    masked_row = mask_data(row, columns, fake, primary_key, cache, dont_mask)
+                    masked_row = mask_data(row, columns, fake, primary_key, cache, dont_mask, column_fakes)
                     insert_row = f"""
                     INSERT INTO new_table ({', '.join(columns)})
                     VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])});
@@ -95,7 +106,7 @@ try:
             except db.Error as ex:
                 print(f"Error executing query: {ex}")
     else:
-        verify_new_rows(conn, execute_stored_procedure, fake, primary_key, cache, dont_mask)
+        verify_new_rows(conn, execute_stored_procedure, fake, primary_key, cache, dont_mask, column_fakes)
 
     if not table_exists(conn, 'mirror_table'):
         # Create the mirror table
