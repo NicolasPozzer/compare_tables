@@ -7,7 +7,9 @@ try:
     conn = db.connect(
         driver="SQL Server",
         server="DESKTOP-NICO",
-        database="compare_data"
+        database="compare_data",
+        username="",
+        password=""
     )
     print("Succesful connection!")
 except db.Error as ex:
