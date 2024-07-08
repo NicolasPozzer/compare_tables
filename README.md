@@ -11,9 +11,11 @@ To run the script, install the dependencies.
 
 ## Instructions
 
-- Run the main.py script (This will create the first necessary tables).
+- Configure the config_db.py script to map the origin and destination databases.
 
-- Once executed for the first time, enter or change parameters of the stored procedure for new data, so that the script logic automatically takes care of adding them to the mirror_table, establishing its current date.
+- Configure the main.py script to assign columns to be masked and with the masking method.
+
+- Run main.py to run the code.
 
 #### mirror_table result:
 ![plot](https://i.imgur.com/WQJfNaU.jpeg)
