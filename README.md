@@ -18,8 +18,8 @@ To run the script, install the dependencies.
   py.exe main.py config_db.py
 ```
 
-#### mirror_table result:
-![plot](https://i.imgur.com/WQJfNaU.jpeg)
+#### Logica del funcionamiento:
+![plot](https://i.imgur.com/lPE1Uea.png)
 
 ## Faker Methods
 ```bash
