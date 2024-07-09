@@ -1,165 +1,155 @@
+import sys
+import importlib
 from datetime import datetime
-from config_db import conn, conn2
 import pyodbc as db
 import pandas as pd
 import warnings
 from faker import Faker
-from src.comp.ColumnMask import ColumnMask
-from src.comp.necesary_functions import (table_exists,
-verify_new_rows, verify_and_add_column, mask_data)
+from src.comp.necesary_functions import (
+    table_exists, verify_new_rows, verify_and_add_column, mask_data
+)
 
+def load_config(config_file):
+    config_name = config_file.replace('.py', '')
+    config = importlib.import_module(config_name)
+    return config
 
-# Query: Execute stored procedure and fetch results⬇
-execute_stored_procedure = "EXEC [dbo].[getMain_table]"
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("falta correr por comando con el archivo de la configuracion")
+        sys.exit(1)
 
-# Set Primary Key Ej. EMPLEID, id, ID, etc
-primary_key = "EMPLID"
+    config_file = sys.argv[1]
+    config = load_config(config_file)
 
-# Set Dont mask columns (Ej. ["FIRST_NAME","LAST_NAME"])
-dont_mask = [primary_key,"FIRST_NAME"]
+    primary_key = config.primary_key
+    dont_mask = config.dont_mask
+    column_fakes = config.column_fakes
+    execute_stored_procedure = config.execute_stored_procedure
 
-# Implement column field name and fake to use for it
-column1 = ColumnMask("LAST_NAME","last_name()")
-column2 = ColumnMask("LVL","random_int()")
-column3 = ColumnMask("ORDR","ssn()")
+    fake = Faker()
 
-#List of Objects to Mask
-column_fakes = [column1, column2, column3]
+    # Do not touch these fields ⬇⬇
+    # Connection to Database
+    try:
+        conn = config.conn
+        conn2 = config.conn2
+        print("Successful connection!")
+    except db.Error as ex:
+        print("Error connecting: ", ex)
 
-fake = Faker()
+    select_new_table = "SELECT * FROM new_table"
+    select_mirror_table = "SELECT * FROM mirror_table"
 
-# ⬆⬆⬆ Just modify the fields above ⬆⬆⬆
+    # Query to create mirror table if it does not exist
+    create_mirror_table = """
+    SELECT *
+    INTO mirror_table
+    FROM new_table;
+    """
+    cache = {}
 
+    # Logical explanation: First I create a mirror table of new_table and then compare the new data from the table
+    # new_table with the old data from the backup table and then create a new column in the mirror table
+    # and assign with current date to new recently added items!
 
+    try:
+        # Ignore warnings from SQLAlchemy
+        warnings.filterwarnings('ignore', message='pandas only supports SQLAlchemy connectable')
 
+        cursor = conn.cursor()
+        cursor2 = conn2.cursor()
+        if not table_exists(conn2, 'new_table'):
+            if not table_exists(conn2, 'backup_table'):
+                try:
+                    # Execute the stored procedure
+                    cursor.execute(execute_stored_procedure)
+                    results = cursor.fetchall()  # Fetch all results
+                    columns = [column[0] for column in cursor.description]  # Get column names
 
-
-
-
-
-# Do not touch these fields ⬇⬇
-# Connection to Database
-try:
-    conn = conn
-    conn2 = conn2
-    print("Successful connection!")
-except db.Error as ex:
-    print("Error connecting: ", ex)
-
-select_new_table = "SELECT * FROM new_table"
-select_mirror_table = "SELECT * FROM mirror_table"
-
-# Query to create mirror table if it does not exist
-create_mirror_table = """
-SELECT *
-INTO mirror_table
-FROM new_table;
-"""
-cache = {}
-
-# Logical explanation: First I create a mirror table of new_table and then compare the new data from the table
-# new_table with the old data from the backup table and then create a new column in the mirror table
-# and assign with current date to new recently added items!
-
-try:
-    # Ignore warnings from SQLAlchemy
-    warnings.filterwarnings('ignore', message='pandas only supports SQLAlchemy connectable')
-
-    cursor = conn.cursor()
-    cursor2 = conn2.cursor()
-    if not table_exists(conn2, 'new_table'):
-        if not table_exists(conn2, 'backup_table'):
-            try:
-                # Execute the stored procedure
-                cursor.execute(execute_stored_procedure)
-                results = cursor.fetchall()  # Fetch all results
-                columns = [column[0] for column in cursor.description]  # Get column names
-
-
-
-                # Create the new table based on the results of the table
-                create_new_table = f"""
-                CREATE TABLE new_table ({', '.join([f'{col} NVARCHAR(MAX)' for col in columns])});
-                """
-                cursor2.execute(create_new_table)
-                conn2.commit()
-
-                # Insert the fetched results into the new table
-                for row in results:
-                    masked_row = mask_data(row, columns, fake, primary_key, cache, dont_mask, column_fakes)
-                    insert_row = f"""
-                    INSERT INTO new_table ({', '.join(columns)})
-                    VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])});
+                    # Create the new table based on the results of the table
+                    create_new_table = f"""
+                    CREATE TABLE new_table ({', '.join([f'{col} NVARCHAR(MAX)' for col in columns])});
                     """
-                    cursor2.execute(insert_row)
+                    cursor2.execute(create_new_table)
+                    conn2.commit()
 
-                conn2.commit()
-                print("Stored procedure executed and results stored in new_table successfully")
+                    # Insert the fetched results into the new table
+                    for row in results:
+                        masked_row = mask_data(row, columns, fake, primary_key, cache, dont_mask, column_fakes)
+                        insert_row = f"""
+                        INSERT INTO new_table ({', '.join(columns)})
+                        VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])});
+                        """
+                        cursor2.execute(insert_row)
 
-                # Create backup_table from new_table
-                create_backup_table = """
-                SELECT *
-                INTO backup_table
-                FROM new_table;
+                    conn2.commit()
+                    print("Stored procedure executed and results stored in new_table successfully")
+
+                    # Create backup_table from new_table
+                    create_backup_table = """
+                    SELECT *
+                    INTO backup_table
+                    FROM new_table;
+                    """
+                    cursor2.execute(create_backup_table)
+                    conn2.commit()
+                    print("Backup table created successfully from new_table")
+
+                except db.Error as ex:
+                    print(f"Error executing query: {ex}")
+        else:
+            verify_new_rows(conn, conn2, execute_stored_procedure, fake, primary_key, cache, dont_mask, column_fakes)
+
+        if not table_exists(conn2, 'mirror_table'):
+            # Create the mirror table
+            cursor2.execute(create_mirror_table)
+            conn2.commit()
+            print("Mirror table created successfully.")
+
+        verify_and_add_column(conn2, 'mirror_table', 'isNew_element', 'VARCHAR(50)')
+
+        new_table = pd.read_sql(select_new_table, conn2)
+        mirror_table = pd.read_sql(select_mirror_table, conn2)
+
+        # Identify new rows
+        new_rows = new_table[~new_table[primary_key].isin(mirror_table[primary_key])]
+
+        if not new_rows.empty:
+            # Insert new rows into mirror_table
+            for index, row in new_rows.iterrows():
+                insert_query = f"""
+                INSERT INTO mirror_table ({', '.join(new_table.columns)}, isNew_element)
+                VALUES ({', '.join(['?' for _ in new_table.columns])}, ?)
                 """
-                cursor2.execute(create_backup_table)
-                conn2.commit()
-                print("Backup table created successfully from new_table")
+                cursor2.execute(insert_query, *row.tolist(), datetime.now())
+            conn2.commit()
+            print("New rows inserted into mirror_table successfully.")
 
-            except db.Error as ex:
-                print(f"Error executing query: {ex}")
-    else:
-        verify_new_rows(conn, conn2, execute_stored_procedure, fake, primary_key, cache, dont_mask, column_fakes)
-
-    if not table_exists(conn2, 'mirror_table'):
-        # Create the mirror table
-        cursor2.execute(create_mirror_table)
-        conn2.commit()
-        print("Mirror table created successfully.")
-
-    verify_and_add_column(conn2,'mirror_table', 'isNew_element', 'VARCHAR(50)')
-
-    new_table = pd.read_sql(select_new_table, conn2)
-    mirror_table = pd.read_sql(select_mirror_table, conn2)
-
-    # Identify new rows
-    new_rows = new_table[~new_table[primary_key].isin(mirror_table[primary_key])]
-
-    if not new_rows.empty:
-        # Insert new rows into mirror_table
+        # Update isNew_element for new rows in mirror_table
         for index, row in new_rows.iterrows():
-            insert_query = f"""
-            INSERT INTO mirror_table ({', '.join(new_table.columns)}, isNew_element)
-            VALUES ({', '.join(['?' for _ in new_table.columns])}, ?)
-            """
-            cursor2.execute(insert_query, *row.tolist(), datetime.now())
+            update_query = f"""
+                UPDATE mirror_table
+                SET isNew_element = ?
+                WHERE {primary_key} = ?
+                """
+            cursor2.execute(update_query, datetime.now(), row[primary_key])
+
         conn2.commit()
-        print("New rows inserted into mirror_table successfully.")
+        print("Comparison and update completed successfully.")
 
-    # Update isNew_element for new rows in mirror_table
-    for index, row in new_rows.iterrows():
-        update_query = f"""
-            UPDATE mirror_table
-            SET isNew_element = ?
-            WHERE {primary_key} = ?
-            """
-        cursor2.execute(update_query, datetime.now(), row[primary_key])
+    except db.Error as ex:
+        print(f"Error executing query: {ex}")
+    finally:
+        # Drop temp_table if it exists
+        if table_exists(conn2, 'temp_table'):
+            drop_temp_table_query = "DROP TABLE temp_table;"
+            conn2.execute(drop_temp_table_query)
+            conn2.commit()
+            print("Temporary table 'temp_table' dropped successfully.")
 
-    conn2.commit()
-    print("Comparison and update completed successfully.")
-
-except db.Error as ex:
-    print(f"Error executing query: {ex}")
-finally:
-    # Drop temp_table if it exists
-    if table_exists(conn2, 'temp_table'):
-        drop_temp_table_query = "DROP TABLE temp_table;"
-        conn2.execute(drop_temp_table_query)
-        conn2.commit()
-        print("Temporary table 'temp_table' dropped successfully.")
-
-    # Close the connection whether errors occur or not.
-    if 'conn' in locals():
-        conn.close()
-    if 'conn2' in locals():
-        conn2.close()
+        # Close the connection whether errors occur or not.
+        if 'conn' in locals():
+            conn.close()
+        if 'conn2' in locals():
+            conn2.close()
