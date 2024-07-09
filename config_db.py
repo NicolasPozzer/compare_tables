@@ -22,6 +22,8 @@ conn2 = db.connect(
 # Query: Execute stored procedure and fetch results⬇
 execute_stored_procedure = "EXEC [dbo].[getMain_table]"
 
+name_output_table = "test_table"
+
 # Set Primary Key Ej. EMPLEID, id, ID, etc
 primary_key = "EMPLID"
 

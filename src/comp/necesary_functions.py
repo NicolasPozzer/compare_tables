@@ -30,7 +30,7 @@ def table_exists(conn2, table_name):
     cursor2.execute(check_table_query)
     return cursor2.fetchone() is not None
 
-def verify_new_rows(conn, conn2, execute_stored_procedure,fake,primary_key, cache, dont_mask, column_fakes):
+def verify_new_rows(conn, conn2, mirror_table, execute_stored_procedure, fake, primary_key, cache, dont_mask, column_fakes):
     try:
         cursor = conn.cursor()
         cursor2 = conn2.cursor()
@@ -42,37 +42,38 @@ def verify_new_rows(conn, conn2, execute_stored_procedure,fake,primary_key, cach
 
         # Create temp_table based on stored procedure results
         create_temp_table = f"""
-        CREATE TABLE temp_table ({', '.join([f'{col} NVARCHAR(MAX)' for col in columns])});
+        CREATE TABLE temp_table ({', '.join([f'{col} NVARCHAR(MAX)' for col in columns])}, isNew_element DATETIME);
         """
         cursor2.execute(create_temp_table)
         conn2.commit()
 
         # Insert fetched results into temp_table
         for row in results:
-            masked_row = mask_data(row, columns, fake, primary_key, cache,dont_mask, column_fakes)
+            masked_row = mask_data(row, columns, fake, primary_key, cache, dont_mask, column_fakes)
             insert_row = f"""
-            INSERT INTO temp_table ({', '.join(columns)})
-            VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])});
+            INSERT INTO temp_table ({', '.join(columns)}, isNew_element)
+            VALUES ({', '.join([f"'{str(val)}'" for val in masked_row])}, NULL);
             """
             cursor2.execute(insert_row)
         conn2.commit()
         print("Temporary table 'temp_table' created and populated successfully.")
 
-        # Insert new rows from temp_table into new_table if they don't already exist
+        # Insert new rows from temp_table into mirror_table if they don't already exist
         insert_new_rows_query = f"""
-        INSERT INTO new_table ({', '.join(columns)})
-        SELECT {', '.join(columns)}
+        INSERT INTO {mirror_table} ({', '.join(columns)}, isNew_element)
+        SELECT {', '.join(columns)}, GETDATE()
         FROM temp_table
         WHERE NOT EXISTS (
-            SELECT 1 FROM new_table WHERE new_table.{primary_key} = temp_table.{primary_key}
+            SELECT 1 FROM {mirror_table} WHERE {mirror_table}.{primary_key} = temp_table.{primary_key}
         );
         """
         cursor2.execute(insert_new_rows_query)
         conn2.commit()
-        print("searching new rows...")
+        print(f"New rows inserted into {mirror_table} successfully.")
 
     except Exception as ex:
         print(f"Error executing query: {ex}")
+
 
 from faker import Faker
 
