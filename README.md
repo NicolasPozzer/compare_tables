@@ -11,11 +11,12 @@ To run the script, install the dependencies.
 
 ## Instructions
 
-- Configure the config_db.py script to map the origin and destination databases.
+- Configure the "config_db.py" script to map the origin and destination databases. Then assign columns to be masked with the masking method.
 
-- Configure the main.py script to assign columns to be masked and with the masking method.
-
-- Run main.py to run the code.
+- Run the following command with the desired configuration file to run the project:
+```bash
+  py.exe main.py config_db.py
+```
 
 #### mirror_table result:
 ![plot](https://i.imgur.com/WQJfNaU.jpeg)
